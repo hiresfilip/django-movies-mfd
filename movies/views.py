@@ -1,5 +1,8 @@
 from django.shortcuts import render
-from django.views.generic import DetailView, ListView
+from django.urls import reverse_lazy
+from django.views.generic import DetailView, ListView, CreateView, UpdateView, DeleteView
+
+from movies.forms import FilmModelForm
 from movies.models import *
 
 def index(request):
@@ -27,6 +30,25 @@ class FilmListView(ListView):
     template_name = 'film/list.html'
     paginate_by = 2
 
+    def get_queryset(self):
+        if 'genre_name' in self.kwargs:
+            return Film.objects.filter(genres__name=self.kwargs['genre_name']).all() # Get 5 books containing the title war
+        else:
+            return Film.objects.all()
+
+    def get_context_data(self, **kwargs):
+        # Call the base implementation first to get a context
+        context = super().get_context_data(**kwargs)
+        # Add in a QuerySet of all the books
+        context['num_films'] = len(self.get_queryset())
+        if 'genre_name' in self.kwargs:
+            context['view_title'] = f"Žánr: {self.kwargs['genre_name']}"
+            context['view_head'] = f"Žánr filmu: {self.kwargs['genre_name']}"
+        else:
+            context['view_title'] = 'Filmy'
+            context['view_head'] = 'Přehled filmů'
+        return context
+
 
 class FilmDetailView(DetailView):
     model = Film
@@ -38,3 +60,18 @@ class FilmDetailView(DetailView):
 def topten(request):
     return render(request, 'topten.html')
 
+
+class FilmCreateView(CreateView):
+    model = Film
+    fields = ['title', 'plot', 'poster', 'genres', 'release_date', 'runtime', 'rate']
+
+
+class FilmUpdateView(UpdateView):
+    model = Film
+    form_class = FilmModelForm
+    template_name = 'movies/film_bootstrap_form.html'
+
+
+class FilmDeleteView(DeleteView):
+    model = Film
+    success_url = reverse_lazy('film_list')
